@@ -6,6 +6,7 @@
                 <button class="btn btn-secondary" @click="save">Save scene</button>
                 <input type='file' accept=".deal" @change='e => load(e)' ref="loadform" hidden />
                 <button class="btn btn-secondary" @click="loadClicked">Load scene</button>
+                <button class="btn btn-secondary" :class="{ 'btn-active': showImport }" @click="showImport = !showImport">Import LIN</button>
                 <button class="btn btn-primary btn-large" @click="submit">Start Game</button>
             </div>
         </div>
@@ -14,11 +15,53 @@
             <div class="content-grid">
                 <!-- Left Column -->
                 <div class="column">
+                <!-- LIN import Section -->
+                <div class="section import-section" v-if="showImport">
+                    <div class="section-header">
+                        <h2>Import from BBO (LIN)</h2>
+                        <div class="header-buttons">
+                            <input type="file" accept=".lin,.txt" @change="e => importLinFile(e)" ref="linform" hidden />
+                            <button class="btn btn-secondary btn-small" @click="linform?.click()">Open .lin file</button>
+                            <button class="btn btn-secondary btn-small" @click="parseLinInput">Parse</button>
+                        </div>
+                    </div>
+                    <textarea
+                        class="input lin-input"
+                        v-model="linInput"
+                        rows="3"
+                        placeholder="Paste LIN text (pn|…|md|…|mb|…|pc|…|) or a BBO handviewer link (…handviewer.html?lin=…)"
+                        @keydown.stop
+                    ></textarea>
+                    <div class="error-message" v-if="linError">{{ linError }}</div>
+                    <div class="lin-boards" v-if="linBoards.length">
+                        <div class="setting-group" v-if="linBoards.length > 1">
+                            <label for="lin-board">Board</label>
+                            <select id="lin-board" v-model="linBoardIndex" class="select">
+                                <option v-for="(b, i) in linBoards" :key="i" :value="i">{{ b.name }} — {{ boardSummary(b) }}</option>
+                            </select>
+                        </div>
+                        <div class="lin-summary" v-if="linBoard">
+                            <div><strong>{{ linBoard.name }}</strong> · dealer {{ positions[linBoard.dealer] }} · vul {{ vulnerabilities[linBoard.vulnerability] }}</div>
+                            <div>{{ boardSummary(linBoard) }}</div>
+                            <div class="lin-players" v-if="linBoard.players.north || linBoard.players.south">
+                                N {{ linBoard.players.north }} · E {{ linBoard.players.east }} · S {{ linBoard.players.south }} · W {{ linBoard.players.west }}
+                            </div>
+                            <div class="error-list" v-if="linBoard.warnings.length">
+                                <div v-for="w in linBoard.warnings" :key="w" class="error-item">{{ w }}</div>
+                            </div>
+                        </div>
+                        <div class="header-buttons">
+                            <button class="btn btn-primary btn-small" @click="applyLinBoard">Use this board</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Cards Section -->
                 <div class="section">
                     <div class="section-header">
-                        <h2>Cards</h2>
+                        <h2>Cards <span class="badge" v-if="options.script" :title="options.script.label">recorded play attached · {{ scriptCardCount }} cards</span></h2>
                         <div class="header-buttons">
+                            <button v-if="options.script" class="btn btn-secondary btn-small" @click="options.script = undefined">Remove play</button>
                             <button class="btn btn-secondary btn-small" @click="genDealPartial">Generate Rest</button>
                             <button class="btn btn-secondary btn-small" @click="genDeal">Generate Deal</button>
                             <button class="btn btn-secondary btn-small" @click="clear">Clear Cards</button>
@@ -272,6 +315,14 @@
                             <div class="key">Spacebar</div>
                             <span>Pass (in auction)</span>
                         </div>
+                        <div class="control-item">
+                            <div class="keys"><span class="key">N</span> <span class="key">A</span></div>
+                            <span>Replay: next card / auto-play (imported LIN)</span>
+                        </div>
+                        <div class="control-item">
+                            <div class="key">B</div>
+                            <span>Replay: undo back to the actual line</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -299,6 +350,74 @@ import Arrow from "@/presentations/components/partial/Arrow.vue";
 
 import { ref, reactive } from "vue";
 import { DealLike, generateDeal, generateDealWithCards } from "../class/deal-generator";
+import { LinBoard, parseLin } from "../class/lin";
+import { contractToShortString, simulateScript } from "../class/script";
+
+// LIN import
+const showImport = ref(false);
+const linInput = ref("");
+const linError = ref("");
+const linBoards = ref<LinBoard[]>([]);
+const linBoardIndex = ref(0);
+const linform = useTemplateRef<HTMLInputElement>("linform");
+const linBoard = computed<LinBoard | undefined>(() => linBoards.value[linBoardIndex.value]);
+
+function parseLinText(text: string) {
+    linError.value = "";
+    try {
+        const boards = parseLin(text);
+        if (boards.length === 0) {
+            linError.value = "No deal found — expected a LIN string with an md| token or a handviewer link.";
+            linBoards.value = [];
+            return;
+        }
+        linBoards.value = boards;
+        linBoardIndex.value = 0;
+    } catch (e) {
+        linError.value = `Could not parse: ${(e as Error).message}`;
+        linBoards.value = [];
+    }
+}
+
+function parseLinInput() {
+    parseLinText(linInput.value);
+}
+
+function importLinFile(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    file.text().then((text) => {
+        linInput.value = text.length > 4000 ? text.slice(0, 4000) + "…" : text;
+        parseLinText(text);
+        input.value = "";
+    });
+}
+
+function boardSummary(b: LinBoard): string {
+    const sim = simulateScript(b.cards, b.dealer, b.script.actions);
+    const contract = contractToShortString(sim.contract) || "no contract";
+    const tricks = sim.tricksDeclarer !== undefined ? ` · ${sim.tricksDeclarer} tricks` : "";
+    const cards = ` · ${sim.cardsPlayed} cards`;
+    const err = sim.errors.length ? ` · ${sim.errors[0]}` : "";
+    return `${contract}${tricks}${cards}${err}`;
+}
+
+function applyLinBoard() {
+    const b = linBoard.value;
+    if (!b) return;
+    options.cards = { ...b.cards };
+    options.firstPlayer = b.dealer;
+    options.vulnerability = b.vulnerability;
+    options.bidding = b.script.actions.some((a) => a.t === "bid");
+    options.contract = undefined;
+    options.activePositions = [Position.North, Position.East, Position.South, Position.West];
+    options.script = b.script;
+    specifyContract.value = false;
+    showImport.value = false;
+}
+
+const scriptCardCount = computed(() => options.script?.actions.filter((a) => a.t === "play").length ?? 0);
 
 
 const STORAGE_KEY = 'bridge-presentation-config';
@@ -366,6 +485,7 @@ function loadClicked() {
 function setOptions(a?: ConfiguratorOptions) {
     if (!a) return;
     Object.assign(options, a);
+    options.script = a.script;
     fakeTricks.value = a.fake?.ns > 0 || a.fake?.ew > 0;
     specifyContract.value = a.contract !== undefined;
     fakeAuction.value = a.bidding;
@@ -985,6 +1105,47 @@ watch(fakeAuction, () => {
             font-weight: 400;
         }
     }
+}
+
+.import-section {
+    .lin-input {
+        width: 100%;
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 0.8rem;
+        resize: vertical;
+    }
+    .lin-boards {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 12px;
+    }
+    .lin-summary {
+        color: #ccc;
+        font-size: 0.85rem;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        .lin-players { color: #999; }
+    }
+}
+
+.badge {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    vertical-align: middle;
+    background: rgba(156, 204, 156, 0.15);
+    border: 1px solid rgba(156, 204, 156, 0.5);
+    color: #9ccc9c;
+}
+
+.btn.btn-active {
+    border-color: #4a9eff;
+    color: #4a9eff;
 }
 
 .error-list {

@@ -5,6 +5,7 @@
         <div class="side-panel">
             <status-panel :game="game" :class="{ 'appear': game.bidding }" />
             <bidding-history-view :auction="game?.auction" v-show="showBiddingHistory" class="appear" />
+            <replay-panel v-if="replay.script.value" :replay="replay" :game="game" class="replay-panel" />
             <control-panel :game="game" class="control-panel" v-show="showControlPanel" />
         </div>
     </div>
@@ -26,7 +27,9 @@ import GameView from '@/presenter/components/GameView.vue';
 import BiddingHistoryView from '@/presenter/components/BiddingHistoryView.vue';
 import StatusPanel from '@/presenter/components/StatusPanel.vue';
 import ControlPanel from '@/presenter/components/ControlPanel.vue';
+import ReplayPanel from '@/presenter/components/ReplayPanel.vue';
 import { makeGameLogEvents } from '../class/debug';
+import { useReplay } from '../composables/useReplay';
 
 const players = PlayerFactory.makeObservablePlayers();
 const game = useGameRef(new PresentationGame(players, PresentationGameOptions.Default));
@@ -36,6 +39,7 @@ defineProps<{
 }>();
 
 const debug = inject("debug", false);
+const replay = useReplay(game);
 
 function startGame(options: ConfiguratorOptions) {
     const gameOpts = new PresentationGameOptions(options.bidding, options.fake?.ns, options.fake?.ew,
@@ -45,6 +49,7 @@ function startGame(options: ConfiguratorOptions) {
     game.value = gm;
     if (debug) makeGameLogEvents(game.value);
     PlayerFactory.putHands(players, options.cards);
+    replay.start(options);
     nextTick(() => game.value.start(options.firstPlayer as Position, options.trumps));
 }
 
@@ -123,6 +128,10 @@ const showControlPanel = computed(() => {
         position: absolute;
         bottom: 0;
         right: 0;
+    }
+
+    .replay-panel {
+        margin-bottom: 200px; // keep clear of the control panel pinned bottom-right
     }
 }
 

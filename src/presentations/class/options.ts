@@ -1,4 +1,5 @@
 import { Contract } from "@/bridge/model/Contract";
+import { Script } from "./script";
 import { Position, PositionHelper } from "@/bridge/model/Position";
 import { Suit } from "@/bridge/model/Suit";
 import { Vulnerability } from "@/bridge/model/Vulnerability";
@@ -25,6 +26,8 @@ export interface ConfiguratorOptions {
   vulnerability: Vulnerability;
   activePositions: Array<Position>;
   uiOptions: UIOptions;
+  /** recorded auction and play (e.g. imported from a BBO LIN file) to replay */
+  script?: Script;
 }
 
 export function getDefaultConfiguratorOptions(): ConfiguratorOptions {
