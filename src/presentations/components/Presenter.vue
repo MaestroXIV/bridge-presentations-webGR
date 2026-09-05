@@ -5,7 +5,7 @@
         <div class="side-panel">
             <status-panel :game="game" :class="{ 'appear': game.bidding }" />
             <bidding-history-view :auction="game?.auction" v-show="showBiddingHistory" class="appear" />
-            <replay-panel v-if="replay.script.value" :replay="replay" :game="game" class="replay-panel" />
+            <replay-panel v-if="replay.script.value" :replay="replay" :game="game" :playlist="options.playlist" class="replay-panel" @navigate-board="d => emit('navigate-board', d)" />
             <control-panel :game="game" class="control-panel" v-show="showControlPanel" />
         </div>
     </div>
@@ -36,6 +36,10 @@ const game = useGameRef(new PresentationGame(players, PresentationGameOptions.De
 
 defineProps<{
     options: ConfiguratorOptions;
+}>();
+
+const emit = defineEmits<{
+    (e: 'navigate-board', delta: number): void;
 }>();
 
 const debug = inject("debug", false);
@@ -130,8 +134,15 @@ const showControlPanel = computed(() => {
         right: 0;
     }
 
+    .side-panel {
+        height: 100vh;
+        overflow: hidden;
+    }
+
     .replay-panel {
-        margin-bottom: 200px; // keep clear of the control panel pinned bottom-right
+        flex: 0 1 auto;
+        min-height: 0;
+        margin-bottom: 190px; // keep clear of the control panel pinned bottom-right
     }
 }
 

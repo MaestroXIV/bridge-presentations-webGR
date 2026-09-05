@@ -73,3 +73,38 @@ describe("parseLin", () => {
     expect(boards[1].script.actions).toHaveLength(58);
   });
 });
+
+import myhands from "./myhands-fixture.html?raw";
+import { importLin, parseMyhandsHtml } from "../lin";
+
+describe("parseMyhandsHtml", () => {
+  it("imports every Movie of a saved Myhands page with results", () => {
+    const imp = parseMyhandsHtml(myhands);
+    expect(imp.title).toBe("#85151  ACBL Fri 3PM ET (MP) Speedball · 2026-09-04");
+    expect(imp.boards.map((b) => b.number)).toEqual([3, 11]);
+    const b3 = imp.boards[0];
+    expect(b3.name).toBe("Board 3");
+    expect(b3.result).toEqual({ contract: "2♥E+1", score: 140, percent: "79.41%" });
+    expect(b3.players).toEqual({ south: "south1", west: "west1", north: "north1", east: "east1" });
+    expect(b3.dealer).toBe(Position.South);
+    expect(b3.vulnerability).toBe(Vulnerability.EW);
+    expect(b3.warnings).toEqual([]);
+    const sim = simulateScript(b3.cards, b3.dealer, b3.script.actions);
+    expect(sim.errors).toEqual([]);
+    expect(sim.declarer).toBe(Position.East);
+    expect(sim.tricksDeclarer).toBe(9); // 2♥E+1, claimed with mc|9|
+
+    const b11 = imp.boards[1];
+    expect(b11.result?.contract).toBe("4♠xW=");
+    // alerted bid "2D!" with an an| explanation must parse as a plain 2D
+    expect(b11.script.actions.slice(0, 5).map((a) => (a.t === "bid" ? a.bid : "?"))).toEqual(["1D", "1S", "P", "2D", "4D"]);
+    const sim11 = simulateScript(b11.cards, b11.dealer, b11.script.actions);
+    expect(sim11.errors).toEqual([]);
+    expect(sim11.tricksDeclarer).toBe(10);
+  });
+
+  it("importLin picks the right parser", () => {
+    expect(importLin(myhands).boards).toHaveLength(2);
+    expect(importLin(fixture.full).boards).toHaveLength(1);
+  });
+});

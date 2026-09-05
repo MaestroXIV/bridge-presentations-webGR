@@ -4,6 +4,11 @@
       <span class="rp-title">{{ replay.script.value.label }}</span>
       <span class="rp-status" :class="statusClass">{{ statusText }}</span>
     </div>
+    <div class="rp-playlist" v-if="playlist">
+      <button class="rp-btn" :disabled="playlist.index <= 0" @click="emit('navigate-board', -1)" title="Previous board (PageUp)">◀</button>
+      <span class="rp-playlist-title">{{ playlist.title }} · board {{ playlist.index + 1 }}/{{ playlist.boards.length }}<template v-if="playlist.boards[playlist.index]?.result"> · {{ playlist.boards[playlist.index].result?.percent }}</template></span>
+      <button class="rp-btn" :disabled="playlist.index >= playlist.boards.length - 1" @click="emit('navigate-board', 1)" title="Next board (PageDown)">▶</button>
+    </div>
 
     <div class="rp-controls">
       <button class="rp-btn" :disabled="!replay.canStep.value" @click="replay.step()" title="Next scripted action (N)">
@@ -40,7 +45,7 @@
           :class="e.state"
         >{{ e.label }}</span>
       </div>
-      <div class="rp-tricks">
+      <div class="rp-tricks" ref="tricksEl">
         <div v-for="(row, t) in trickRows" :key="'t' + t" class="rp-trick">
           <span class="rp-trick-no">{{ t + 1 }}</span>
           <span
@@ -62,16 +67,22 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import type { useReplay } from "@/presentations/composables/useReplay";
 import { actionLabel, contractToShortString } from "@/presentations/class/script";
 import { PresentationGame } from "@/bridge/model/PresentationGame";
+import type { Playlist } from "@/presentations/class/options";
 import { PositionHelper, Side } from "@/bridge/model/Position";
 import { useKeyboardShortcut } from "../composables/useKeyboardShortcut";
 
 const props = defineProps<{
   replay: ReturnType<typeof useReplay>;
   game: PresentationGame;
+  playlist?: Playlist;
+}>();
+
+const emit = defineEmits<{
+  (e: "navigate-board", delta: number): void;
 }>();
 
 const replay = props.replay;
@@ -83,6 +94,16 @@ useKeyboardShortcut("a", null, () => {
   if (replay.onScript.value) replay.toggleAuto();
 });
 useKeyboardShortcut("b", null, () => replay.backToScript());
+
+// keep the next card (or the last played one) in view as the list scrolls
+const tricksEl = ref<HTMLDivElement>();
+watch(
+  () => replay.history.value.length,
+  () => nextTick(() => {
+    const el = tricksEl.value?.querySelector(".rp-chip.next, .rp-chip.off:last-of-type") as HTMLElement | null;
+    el?.scrollIntoView({ block: "nearest" });
+  }),
+);
 
 const canPlayAuction = computed(
   () => replay.onScript.value && !replay.autoplay.value && props.game.state === "bidding",
@@ -221,6 +242,24 @@ const branchLabel = computed(() => {
   }
 }
 
+.rp-playlist {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #bbb;
+  .rp-playlist-title { flex: 1; text-align: center; }
+  .rp-btn {
+    background: rgba(0, 0, 0, 0.4);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 3px;
+    padding: 2px 8px;
+    cursor: pointer;
+    &:disabled { opacity: 0.35; cursor: default; }
+  }
+}
+
 .rp-controls {
   display: flex;
   gap: 4px;
@@ -260,6 +299,7 @@ const branchLabel = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-height: 0;
 }
 .rp-auction {
   display: flex;
@@ -272,7 +312,7 @@ const branchLabel = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: 40vh;
+  min-height: 46px; // at least two tricks visible; the rest scrolls
   overflow-y: auto;
 }
 .rp-trick {

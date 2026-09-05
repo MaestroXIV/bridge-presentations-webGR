@@ -1,6 +1,6 @@
 <template>
-  <configurator v-show="state === 'configurator'" @submit="startGame" @update:options="updateOptions"></configurator>
-  <presenter ref="presenter" v-show="state === 'presenter'" :options="options"></presenter>
+  <configurator ref="configurator" v-show="state === 'configurator'" @submit="startGame" @update:options="updateOptions"></configurator>
+  <presenter ref="presenter" v-show="state === 'presenter'" :options="options" @navigate-board="navigateBoard"></presenter>
 </template>
 
 <script lang="ts" setup>
@@ -12,6 +12,7 @@ import { useKeyboardShortcut } from '@/presenter/composables/useKeyboardShortcut
 
 const state = ref<'configurator' | 'presenter'>('configurator');
 const presenter = ref<typeof Presenter>();
+const configurator = ref<typeof Configurator>();
 
 function changeState(newState?: 'configurator' | 'presenter') {
   state.value = newState ? newState : (state.value === 'configurator' ? 'presenter' : 'configurator');
@@ -29,7 +30,14 @@ const updateOptions = (opts: ConfiguratorOptions) => {
   options.value = opts;
 }
 
+/** Moves to another board of a loaded session (playlist) and restarts the presentation. */
+function navigateBoard(delta: number) {
+  if (configurator.value?.goToBoard(delta)) configurator.value?.submit();
+}
+
 useKeyboardShortcut("q", "ctrl", () => changeState());
+useKeyboardShortcut("PageDown", null, () => { if (state.value === 'presenter') navigateBoard(1); });
+useKeyboardShortcut("PageUp", null, () => { if (state.value === 'presenter') navigateBoard(-1); });
 useKeyboardShortcut("+", null, () => startGame(options.value));
 </script>
 

@@ -20,8 +20,8 @@
                     <div class="section-header">
                         <h2>Import from BBO (LIN)</h2>
                         <div class="header-buttons">
-                            <input type="file" accept=".lin,.txt" @change="e => importLinFile(e)" ref="linform" hidden />
-                            <button class="btn btn-secondary btn-small" @click="linform?.click()">Open .lin file</button>
+                            <input type="file" accept=".lin,.txt,.html,.htm" @change="e => importLinFile(e)" ref="linform" hidden />
+                            <button class="btn btn-secondary btn-small" @click="linform?.click()">Open .lin / Myhands .html</button>
                             <button class="btn btn-secondary btn-small" @click="parseLinInput">Parse</button>
                         </div>
                     </div>
@@ -29,16 +29,27 @@
                         class="input lin-input"
                         v-model="linInput"
                         rows="3"
-                        placeholder="Paste LIN text (pn|…|md|…|mb|…|pc|…|) or a BBO handviewer link (…handviewer.html?lin=…)"
+                        placeholder="Paste LIN text (pn|…|md|…|mb|…|pc|…|), a BBO handviewer link, or the HTML of a saved BBO Myhands page (whole tourney)"
                         @keydown.stop
                     ></textarea>
                     <div class="error-message" v-if="linError">{{ linError }}</div>
                     <div class="lin-boards" v-if="linBoards.length">
-                        <div class="setting-group" v-if="linBoards.length > 1">
-                            <label for="lin-board">Board</label>
-                            <select id="lin-board" v-model="linBoardIndex" class="select">
-                                <option v-for="(b, i) in linBoards" :key="i" :value="i">{{ b.name }} — {{ boardSummary(b) }}</option>
-                            </select>
+                        <div class="lin-title" v-if="linTitle">{{ linTitle }} · {{ linBoards.length }} boards</div>
+                        <div class="lin-table-wrap" v-if="linBoards.length > 1">
+                            <table class="lin-table">
+                                <thead><tr><th>#</th><th>Result</th><th>Score</th><th>%</th><th>N / S</th><th>E / W</th><th>Cards</th></tr></thead>
+                                <tbody>
+                                    <tr v-for="(b, i) in linBoards" :key="i" :class="{ selected: i === linBoardIndex }" @click="linBoardIndex = i">
+                                        <td>{{ b.number ?? i + 1 }}</td>
+                                        <td>{{ b.result?.contract || boardSummary(b) }}</td>
+                                        <td :class="{ neg: (b.result?.score ?? 0) < 0 }">{{ b.result?.score ?? "" }}</td>
+                                        <td>{{ b.result?.percent ?? "" }}</td>
+                                        <td class="dim">{{ b.players.north }} / {{ b.players.south }}</td>
+                                        <td class="dim">{{ b.players.east }} / {{ b.players.west }}</td>
+                                        <td class="dim">{{ b.script.actions.filter(a => a.t === "play").length }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                         <div class="lin-summary" v-if="linBoard">
                             <div><strong>{{ linBoard.name }}</strong> · dealer {{ positions[linBoard.dealer] }} · vul {{ vulnerabilities[linBoard.vulnerability] }}</div>
@@ -52,6 +63,28 @@
                         </div>
                         <div class="header-buttons">
                             <button class="btn btn-primary btn-small" @click="applyLinBoard">Use this board</button>
+                            <button v-if="linBoards.length > 1" class="btn btn-primary btn-small" @click="loadPlaylist">Load all {{ linBoards.length }} boards</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Playlist navigation -->
+                <div class="section playlist-section" v-if="options.playlist">
+                    <div class="section-header">
+                        <h2>Session</h2>
+                        <div class="header-buttons">
+                            <button class="btn btn-secondary btn-small" :disabled="options.playlist.index <= 0" @click="goToBoard(-1)">◀ Prev</button>
+                            <button class="btn btn-secondary btn-small" :disabled="options.playlist.index >= options.playlist.boards.length - 1" @click="goToBoard(1)">Next ▶</button>
+                            <button class="btn btn-secondary btn-small" @click="options.playlist = undefined">Close session</button>
+                        </div>
+                    </div>
+                    <div class="lin-summary">
+                        <div><strong>{{ options.playlist.title }}</strong></div>
+                        <div>Board {{ options.playlist.index + 1 }} of {{ options.playlist.boards.length }}
+                            <template v-if="options.playlist.boards[options.playlist.index]?.result"> · {{ options.playlist.boards[options.playlist.index].result?.contract }} · {{ options.playlist.boards[options.playlist.index].result?.percent }}</template>
+                        </div>
+                        <div class="playlist-chips">
+                            <button v-for="(b, i) in options.playlist.boards" :key="i" class="chip" :class="{ selected: i === options.playlist.index }" @click="goToBoard(i - options.playlist.index)" :title="b.result?.contract">{{ b.number ?? i + 1 }}</button>
                         </div>
                     </div>
                 </div>
@@ -350,7 +383,7 @@ import Arrow from "@/presentations/components/partial/Arrow.vue";
 
 import { ref, reactive } from "vue";
 import { DealLike, generateDeal, generateDealWithCards } from "../class/deal-generator";
-import { LinBoard, parseLin } from "../class/lin";
+import { LinBoard, importLin } from "../class/lin";
 import { contractToShortString, simulateScript } from "../class/script";
 
 // LIN import
@@ -358,6 +391,7 @@ const showImport = ref(false);
 const linInput = ref("");
 const linError = ref("");
 const linBoards = ref<LinBoard[]>([]);
+const linTitle = ref<string | undefined>();
 const linBoardIndex = ref(0);
 const linform = useTemplateRef<HTMLInputElement>("linform");
 const linBoard = computed<LinBoard | undefined>(() => linBoards.value[linBoardIndex.value]);
@@ -365,13 +399,14 @@ const linBoard = computed<LinBoard | undefined>(() => linBoards.value[linBoardIn
 function parseLinText(text: string) {
     linError.value = "";
     try {
-        const boards = parseLin(text);
-        if (boards.length === 0) {
-            linError.value = "No deal found — expected a LIN string with an md| token or a handviewer link.";
+        const imp = importLin(text);
+        if (imp.boards.length === 0) {
+            linError.value = "No deal found — expected a LIN string with an md| token, a handviewer link, or a saved BBO Myhands page.";
             linBoards.value = [];
             return;
         }
-        linBoards.value = boards;
+        linBoards.value = imp.boards;
+        linTitle.value = imp.title;
         linBoardIndex.value = 0;
     } catch (e) {
         linError.value = `Could not parse: ${(e as Error).message}`;
@@ -388,7 +423,7 @@ function importLinFile(event: Event) {
     const file = input.files?.[0];
     if (!file) return;
     file.text().then((text) => {
-        linInput.value = text.length > 4000 ? text.slice(0, 4000) + "…" : text;
+        linInput.value = text.length > 4000 ? `[${file.name}, ${text.length} characters]` : text;
         parseLinText(text);
         input.value = "";
     });
@@ -403,9 +438,7 @@ function boardSummary(b: LinBoard): string {
     return `${contract}${tricks}${cards}${err}`;
 }
 
-function applyLinBoard() {
-    const b = linBoard.value;
-    if (!b) return;
+function applyBoard(b: LinBoard) {
     options.cards = { ...b.cards };
     options.firstPlayer = b.dealer;
     options.vulnerability = b.vulnerability;
@@ -414,8 +447,39 @@ function applyLinBoard() {
     options.activePositions = [Position.North, Position.East, Position.South, Position.West];
     options.script = b.script;
     specifyContract.value = false;
+}
+
+function applyLinBoard() {
+    const b = linBoard.value;
+    if (!b) return;
+    options.playlist = undefined;
+    applyBoard(b);
     showImport.value = false;
 }
+
+function loadPlaylist() {
+    if (!linBoards.value.length) return;
+    options.playlist = {
+        title: linTitle.value ?? `${linBoards.value.length} boards`,
+        index: linBoardIndex.value,
+        boards: linBoards.value,
+    };
+    applyBoard(linBoards.value[linBoardIndex.value]);
+    showImport.value = false;
+}
+
+/** Moves within the loaded session by `delta` boards and applies that board. Returns false at the ends. */
+function goToBoard(delta: number): boolean {
+    const pl = options.playlist;
+    if (!pl) return false;
+    const next = pl.index + delta;
+    if (next < 0 || next >= pl.boards.length) return false;
+    pl.index = next;
+    applyBoard(pl.boards[next]);
+    return true;
+}
+
+defineExpose({ goToBoard, submit });
 
 const scriptCardCount = computed(() => options.script?.actions.filter((a) => a.t === "play").length ?? 0);
 
@@ -486,6 +550,7 @@ function setOptions(a?: ConfiguratorOptions) {
     if (!a) return;
     Object.assign(options, a);
     options.script = a.script;
+    options.playlist = a.playlist;
     fakeTricks.value = a.fake?.ns > 0 || a.fake?.ew > 0;
     specifyContract.value = a.contract !== undefined;
     fakeAuction.value = a.bidding;
@@ -1127,6 +1192,49 @@ watch(fakeAuction, () => {
         flex-direction: column;
         gap: 3px;
         .lin-players { color: #999; }
+    }
+}
+
+.lin-title {
+    color: #ddd;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+.lin-table-wrap {
+    max-height: 260px;
+    overflow: auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+}
+.lin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    color: #ccc;
+    th, td { padding: 5px 8px; text-align: left; white-space: nowrap; }
+    th { color: #888; font-weight: 500; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; position: sticky; top: 0; background: #1d1d1d; }
+    tbody tr { cursor: pointer; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+    tbody tr:hover { background: rgba(255, 255, 255, 0.06); }
+    tbody tr.selected { background: rgba(74, 158, 255, 0.18); color: #fff; }
+    td.neg { color: #ff8a8a; }
+    td.dim { color: #888; }
+}
+.playlist-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+    .chip {
+        min-width: 30px;
+        padding: 3px 6px;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.05);
+        color: #ccc;
+        font-size: 0.75rem;
+        cursor: pointer;
+        &.selected { background: #4a9eff; border-color: #4a9eff; color: #fff; }
+        &:hover:not(.selected) { background: rgba(255, 255, 255, 0.12); }
     }
 }
 

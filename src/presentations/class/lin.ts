@@ -15,8 +15,21 @@ import { Position } from "@/bridge/model/Position";
 import { Vulnerability } from "@/bridge/model/Vulnerability";
 import { normalizeBidString, normalizeCardString, Script, ScriptAction } from "./script";
 
+export interface LinBoardResult {
+  /** e.g. "2♥E+1" as shown on BBO */
+  contract: string;
+  /** score from the viewpoint of the account that exported the page */
+  score: number | undefined;
+  /** matchpoint % or IMPs as shown */
+  percent: string;
+}
+
 export interface LinBoard {
   name: string;
+  /** board number when known (Myhands table, qx|o12|) */
+  number?: number;
+  /** result columns from a Myhands table, if imported from one */
+  result?: LinBoardResult;
   players: { north: string; east: string; south: string; west: string };
   dealer: Position;
   vulnerability: Vulnerability;
@@ -54,8 +67,8 @@ export function extractLinText(input: string): string {
       return m[1];
     }
   }
-  // Some exports URL-encode the LIN itself without a URL around it
-  if (/%7C/i.test(s) && !s.includes("|")) {
+  // Some exports URL-encode the LIN (or the part after pn|, as Myhands does)
+  if (/%7C/i.test(s)) {
     try {
       return decodeURIComponent(s);
     } catch {
@@ -147,6 +160,75 @@ interface RawBoard {
   warnings: string[];
 }
 
+export interface LinImport {
+  /** tourney title when imported from a Myhands page */
+  title?: string;
+  boards: LinBoard[];
+}
+
+/** Strips tags and decodes entities from a table cell. */
+function cellText(htmlFragment: string): string {
+  const noTags = htmlFragment.replace(/<[^>]+>/g, "");
+  const entities: Record<string, string> = {
+    "&spades;": "♠", "&hearts;": "♥", "&diams;": "♦", "&clubs;": "♣",
+    "&nbsp;": " ", "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"',
+  };
+  return noTags.replace(/&[a-z]+;/g, (m) => entities[m] ?? m).trim();
+}
+
+/**
+ * Parses a saved BBO "Myhands" page: every row's Movie link carries the
+ * board's LIN in hv_popuplin('…'), and the row carries result, score and %.
+ */
+export function parseMyhandsHtml(htmlText: string): LinImport {
+  const boards: LinBoard[] = [];
+  const titleMatch = htmlText.match(/<td class="tourneyName"[^>]*>(.*?)<\/td>/s);
+  const dateMatch = htmlText.match(/<th colspan="11">(\d{4}-\d{2}-\d{2})<\/th>/);
+  const title = [titleMatch ? cellText(titleMatch[1]) : undefined, dateMatch?.[1]]
+    .filter(Boolean)
+    .join(" · ") || undefined;
+
+  const rowRe = /<tr class="tourney">(.*?)<\/tr>/gs;
+  let row: RegExpExecArray | null;
+  while ((row = rowRe.exec(htmlText))) {
+    const r = row[1];
+    const lin = r.match(/hv_popuplin\('((?:[^'\\]|\\.)*)'\)/);
+    if (!lin) continue;
+    const linText = lin[1].replace(/\\'/g, "'");
+    const parsed = parseLin(linText);
+    if (parsed.length === 0) continue;
+    const b = parsed[0];
+    const cell = (cls: string) => {
+      const m = r.match(new RegExp(`<td class="${cls}"[^>]*>(.*?)<\\/td>`, "s"));
+      return m ? cellText(m[1]) : "";
+    };
+    const num = parseInt(cell("handnum"));
+    if (!isNaN(num)) {
+      b.number = num;
+      if (!/\d/.test(b.name)) b.name = `Board ${num}`;
+    }
+    const scoreCells = [...r.matchAll(/<td class="(?:score|negscore)"[^>]*>(.*?)<\/td>/gs)].map((m) => cellText(m[1]));
+    const score = scoreCells.length ? parseInt(scoreCells[0].replace(/[^-\d]/g, "")) : NaN;
+    b.result = {
+      contract: cell("result"),
+      score: isNaN(score) ? undefined : score,
+      percent: scoreCells[1] ?? "",
+    };
+    b.script.label = `BBO — ${b.name}${b.result.contract ? " · " + b.result.contract : ""}`;
+    boards.push(b);
+  }
+  return { title, boards };
+}
+
+/**
+ * Entry point for the Import UI: accepts raw LIN, a handviewer URL, a
+ * multi-board LIN file, or a saved Myhands HTML page.
+ */
+export function importLin(input: string): LinImport {
+  if (/hv_popuplin\(/.test(input)) return parseMyhandsHtml(input);
+  return { boards: parseLin(input) };
+}
+
 /** Parses one LIN text (raw, URL, or multi-board) into boards. */
 export function parseLin(input: string): LinBoard[] {
   const text = extractLinText(input).replace(/\r?\n/g, "");
@@ -224,12 +306,14 @@ export function parseLin(input: string): LinBoard[] {
       };
       const vulnerability = VUL_BY_LETTER[b.sv?.[0] ?? "o"] ?? Vulnerability.None;
       const name = b.name ?? (boards.length > 1 ? `Board ${idx + 1}` : "Board");
+      const numMatch = name.match(/(\d+)/);
+      const number = numMatch ? parseInt(numMatch[1]) : undefined;
       if (!b.actions.some((a) => a.t === "bid")) warnings.push("no auction in file");
       const script: Script = {
         label: `BBO LIN — ${name}`,
         players,
         actions: b.actions,
       };
-      return { name, players, dealer, vulnerability, cards, script, warnings };
+      return { name, number, players, dealer, vulnerability, cards, script, warnings };
     });
 }

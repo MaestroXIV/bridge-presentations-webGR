@@ -1,5 +1,6 @@
 import { Contract } from "@/bridge/model/Contract";
 import { Script } from "./script";
+import { LinBoard } from "./lin";
 import { Position, PositionHelper } from "@/bridge/model/Position";
 import { Suit } from "@/bridge/model/Suit";
 import { Vulnerability } from "@/bridge/model/Vulnerability";
@@ -28,6 +29,14 @@ export interface ConfiguratorOptions {
   uiOptions: UIOptions;
   /** recorded auction and play (e.g. imported from a BBO LIN file) to replay */
   script?: Script;
+  /** a whole imported session (e.g. a BBO tourney); `index` is the board in play */
+  playlist?: Playlist;
+}
+
+export interface Playlist {
+  title: string;
+  index: number;
+  boards: LinBoard[];
 }
 
 export function getDefaultConfiguratorOptions(): ConfiguratorOptions {

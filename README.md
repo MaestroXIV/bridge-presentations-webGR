@@ -20,6 +20,12 @@ Click **Import LIN**, paste a LIN string or a BBO handviewer link (or open a
 `.lin` file), pick the board and click **Use this board**. The deal, dealer and
 vulnerability are filled in and the recorded auction and play are attached.
 
+To go through a whole session, save the BBO **Myhands** page of the tourney
+(File → Save Page As… in the browser) and open that `.html` with **Open .lin /
+Myhands .html**: every board appears with its result and score. **Load all
+boards** keeps the session as a playlist; `PageUp` / `PageDown` (or the ◀ ▶
+buttons in the replay panel) move between boards during the presentation.
+
 In the presentation a replay panel appears: **Next** (`N`) plays the next
 recorded bid or card, **Auction ▶** runs the auction and stops before the
 opening lead, **Trick ▶** finishes the current trick, **All ▶▶** (`A`)
