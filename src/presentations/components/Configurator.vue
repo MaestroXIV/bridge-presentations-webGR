@@ -7,6 +7,7 @@
                 <input type='file' accept=".deal" @change='e => load(e)' ref="loadform" hidden />
                 <button class="btn btn-secondary" @click="loadClicked">Load scene</button>
                 <button class="btn btn-secondary" :class="{ 'btn-active': showImport }" @click="showImport = !showImport">Import LIN</button>
+                <button class="btn btn-secondary" @click="openAudienceWindow()" title="Opens a second window that shows only the table; drag it to the projector or share it in your video call">Audience window</button>
                 <button class="btn btn-primary btn-large" @click="submit">Start Game</button>
             </div>
         </div>
@@ -356,6 +357,10 @@
                             <div class="key">B</div>
                             <span>Replay: undo back to the actual line</span>
                         </div>
+                        <div class="control-item">
+                            <div class="key">W</div>
+                            <span>Open the audience window</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -385,6 +390,7 @@ import { ref, reactive } from "vue";
 import { DealLike, generateDeal, generateDealWithCards } from "../class/deal-generator";
 import { LinBoard, importLin } from "../class/lin";
 import { contractToShortString, simulateScript } from "../class/script";
+import { openAudienceWindow } from "../class/transport";
 
 // LIN import
 const showImport = ref(false);

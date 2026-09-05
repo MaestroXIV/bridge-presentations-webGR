@@ -1,6 +1,9 @@
 <template>
-  <configurator ref="configurator" v-show="state === 'configurator'" @submit="startGame" @update:options="updateOptions"></configurator>
-  <presenter ref="presenter" v-show="state === 'presenter'" :options="options" @navigate-board="navigateBoard"></presenter>
+  <audience-view v-if="audience"></audience-view>
+  <template v-else>
+    <configurator ref="configurator" v-show="state === 'configurator'" @submit="startGame" @update:options="updateOptions"></configurator>
+    <presenter ref="presenter" v-show="state === 'presenter'" :options="options" @navigate-board="navigateBoard"></presenter>
+  </template>
 </template>
 
 <script lang="ts" setup>
@@ -8,7 +11,12 @@ import Configurator from '@/presentations/components/Configurator.vue';
 import { ConfiguratorOptions, getDefaultConfiguratorOptions } from './class/options';
 import { ref } from 'vue';
 import Presenter from '@/presentations/components/Presenter.vue';
+import AudienceView from '@/presentations/components/AudienceView.vue';
 import { useKeyboardShortcut } from '@/presenter/composables/useKeyboardShortcut';
+import { isAudienceRole } from './class/transport';
+
+/** ?role=audience: a window that only shows the table, driven by the teacher window */
+const audience = isAudienceRole();
 
 const state = ref<'configurator' | 'presenter'>('configurator');
 const presenter = ref<typeof Presenter>();
@@ -35,10 +43,10 @@ function navigateBoard(delta: number) {
   if (configurator.value?.goToBoard(delta)) configurator.value?.submit();
 }
 
-useKeyboardShortcut("q", "ctrl", () => changeState());
-useKeyboardShortcut("PageDown", null, () => { if (state.value === 'presenter') navigateBoard(1); });
-useKeyboardShortcut("PageUp", null, () => { if (state.value === 'presenter') navigateBoard(-1); });
-useKeyboardShortcut("+", null, () => startGame(options.value));
+useKeyboardShortcut("q", "ctrl", () => { if (!audience) changeState(); });
+useKeyboardShortcut("PageDown", null, () => { if (!audience && state.value === 'presenter') navigateBoard(1); });
+useKeyboardShortcut("PageUp", null, () => { if (!audience && state.value === 'presenter') navigateBoard(-1); });
+useKeyboardShortcut("+", null, () => { if (!audience) startGame(options.value); });
 </script>
 
 <style lang="scss">

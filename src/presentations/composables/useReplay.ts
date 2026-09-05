@@ -30,7 +30,7 @@ export type ReplayStopAt = "lead" | "trick" | "end";
 export interface HistoryEntry {
   key: string;
   label: string;
-  kind: "bid" | "play";
+  kind: "bid" | "play" | "claim";
 }
 
 export function useReplay(game: Ref<PresentationGame>) {
@@ -41,6 +41,8 @@ export function useReplay(game: Ref<PresentationGame>) {
   const history = ref<HistoryEntry[]>([]);
   /** the player the game is currently waiting for, and what kind of action */
   const pending = ref<{ player: PresentationPlayer; kind: "bid" | "play" } | undefined>();
+  /** bumps after every history rebuild — lets consumers react even when the keys are unchanged */
+  const changes = ref(0);
 
   const autoplay = ref(false);
   const stopAt = ref<ReplayStopAt>("lead");
@@ -88,7 +90,13 @@ export function useReplay(game: Ref<PresentationGame>) {
         h.push({ key: `c:${cardKey(c.card)}`, label: c.card.toShortString(), kind: "play" }),
       ),
     );
+    const contract = g.finalContract;
+    if (g.claimed && contract && contract !== "passed") {
+      const tricks = g.trickCount(PositionHelper.side(contract.declarer));
+      h.push({ key: `claim:${tricks}`, label: `claim ${tricks}`, kind: "claim" });
+    }
     history.value = h;
+    changes.value++;
   }
 
   function clearAutoTimer() {
@@ -104,8 +112,9 @@ export function useReplay(game: Ref<PresentationGame>) {
     const g = game.value;
 
     if (next.t === "claim") {
-      if (g.state !== "cardplay" || !simulation.value?.declarer) return false;
-      const declSide = PositionHelper.side(simulation.value.declarer);
+      const contract = g.finalContract;
+      if (g.state !== "cardplay" || !contract || contract === "passed") return false;
+      const declSide = PositionHelper.side(contract.declarer);
       const won = g.trickCount(declSide);
       const finishedTricks = g.tricks.filter((t) => t.isFinished).length;
       const remaining = 13 - finishedTricks;
@@ -236,6 +245,8 @@ export function useReplay(game: Ref<PresentationGame>) {
     script,
     simulation,
     history,
+    changes,
+    pending,
     actions,
     branchedAt,
     onScript,

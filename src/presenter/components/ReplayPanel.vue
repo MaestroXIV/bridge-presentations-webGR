@@ -168,6 +168,7 @@ const entries = computed<{ kind: "bid" | "play"; e: Entry }[]>(() => {
   for (let i = 0; i < n; i++) {
     const done = h[i];
     if (done) {
+      if (done.kind === "claim") continue;
       const off = b !== undefined && i >= b;
       out.push({ kind: done.kind, e: { label: done.label, state: off ? "off" : "done", suitClass: suitOf(done.label) } });
     } else {

@@ -3,6 +3,14 @@
         <game-view :game="game" :handsVisible="handsVisible" class="game-view"
             :endMessage="options.uiOptions.endMessage" :vertical-card-layout="options.uiOptions.verticalLayout" />
         <div class="side-panel">
+            <div class="audience-strip" v-if="teacher.available">
+                <button class="audience-btn" @click="teacher.openAudienceWindow()" title="Open the audience window (W) — drag it to the projector or share it in your call">
+                    Audience window <kbd>W</kbd>
+                </button>
+                <span class="audience-count" :class="{ live: teacher.audienceCount.value > 0 }">
+                    {{ teacher.audienceCount.value > 0 ? `${teacher.audienceCount.value} connected` : 'none open' }}
+                </span>
+            </div>
             <status-panel :game="game" :class="{ 'appear': game.bidding }" />
             <bidding-history-view :auction="game?.auction" v-show="showBiddingHistory" class="appear" />
             <replay-panel v-if="replay.script.value" :replay="replay" :game="game" :playlist="options.playlist" class="replay-panel" @navigate-board="d => emit('navigate-board', d)" />
@@ -30,6 +38,7 @@ import ControlPanel from '@/presenter/components/ControlPanel.vue';
 import ReplayPanel from '@/presenter/components/ReplayPanel.vue';
 import { makeGameLogEvents } from '../class/debug';
 import { useReplay } from '../composables/useReplay';
+import { useTeacherBroadcast } from '../composables/useTeacherBroadcast';
 
 const players = PlayerFactory.makeObservablePlayers();
 const game = useGameRef(new PresentationGame(players, PresentationGameOptions.Default));
@@ -54,6 +63,7 @@ function startGame(options: ConfiguratorOptions) {
     if (debug) makeGameLogEvents(game.value);
     PlayerFactory.putHands(players, options.cards);
     replay.start(options);
+    teacher.start(options);
     nextTick(() => game.value.start(options.firstPlayer as Position, options.trumps));
 }
 
@@ -81,6 +91,11 @@ const handsVisible = ref<Map<Position, boolean>>(new Map(
 useKeyboardShortcut('z', null, () =>
     game.value.undo()
 );
+
+// Audience window: a second browser window (?role=audience) that mirrors this
+// game without any controls; see class/transport.ts
+const teacher = useTeacherBroadcast(game, replay, handsVisible);
+useKeyboardShortcut('w', null, () => teacher.openAudienceWindow());
 
 // Pass bid shortcut
 useKeyboardShortcut(' ', null, () => {
@@ -137,6 +152,31 @@ const showControlPanel = computed(() => {
     .side-panel {
         height: 100vh;
         overflow: hidden;
+    }
+
+    .audience-strip {
+        position: absolute;
+        top: 8px;
+        right: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 12px;
+        color: #888;
+
+        .audience-btn {
+            background: rgba(0, 0, 0, 0.4);
+            color: #ddd;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 3px;
+            padding: 3px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            &:hover { background: rgba(255, 255, 255, 0.12); }
+            kbd { font-family: inherit; font-size: 10px; opacity: 0.6; margin-left: 3px; }
+        }
+        .audience-count.live { color: #9ccc9c; }
     }
 
     .replay-panel {

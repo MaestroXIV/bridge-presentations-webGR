@@ -47,7 +47,7 @@
 
         <DebugView v-if="debug" :game="game" :cardViews="cardViews"></DebugView>
       </div>
-      <BiddingBox v-show="game?.state === 'bidding'" @bid="biddingBoxCallback" :isBidLegal="isBidLegal"></BiddingBox>
+      <BiddingBox v-show="interactive && game?.state === 'bidding'" @bid="biddingBoxCallback" :isBidLegal="isBidLegal"></BiddingBox>
     </CardProvider>
   </div>
 </template>
@@ -84,8 +84,11 @@ const props = withDefaults(defineProps<{
   handsVisible?: Map<Position, boolean>;
   endMessage?: string;
   verticalCardLayout?: boolean;
+  /** false in the audience window: no bidding box */
+  interactive?: boolean;
 }>(), {
   verticalCardLayout: false,
+  interactive: true,
 });
 
 const handsVisible = computed(() => props.handsVisible ?? new Map([
