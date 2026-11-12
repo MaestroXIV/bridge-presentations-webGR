@@ -70,6 +70,10 @@ export interface StudioBoard {
   mySide?: Side;
   /** "whole" or "step" (call by call); overrides the presenter's default for this board */
   auctionMode?: "whole" | "step";
+  /** seats whose cards are not shown on the stage; missing = all hands shown */
+  hidden?: Seat[];
+  /** when dummy is hidden: show it once the opening lead has been played */
+  showDummyAfterLead?: boolean;
   /** BBO traveller link of the board (kept for reference / later fetching) */
   travellerUrl?: string;
   /** tournament the board belongs to, when a file holds several */

@@ -6,6 +6,7 @@
 import type { LinBoard, LinImport } from "@/presentations/class/lin";
 import { normalizeCall } from "./auction";
 import { parseDotHand, sortCards } from "./play";
+import { normalizeHidden } from "./visibility";
 import { Call, Scoring, Seat, SEATS, Side, StudioBoard, StudioSession, Traveller, Vul } from "./types";
 
 export const SESSION_FORMAT = "bridge-presenter-session";
@@ -140,6 +141,8 @@ function normalizeBoard(raw: Record<string, unknown>, index: number, warnings: s
     claim: typeof raw.claim === "number" ? raw.claim : undefined,
     ...(typeof raw.contract === "string" && seatOf(raw.declarer) ? { contract: raw.contract, declarer: seatOf(raw.declarer) } : {}),
     note: typeof raw.note === "string" ? raw.note : undefined,
+    ...(Array.isArray(raw.hidden) && normalizeHidden(raw.hidden).length ? { hidden: normalizeHidden(raw.hidden) } : {}),
+    ...(raw.showDummyAfterLead === true ? { showDummyAfterLead: true } : {}),
     ...(raw.auctionMode === "whole" || raw.auctionMode === "step" ? { auctionMode: raw.auctionMode as "whole" | "step" } : {}),
     scoring,
     travellers,

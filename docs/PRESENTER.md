@@ -34,11 +34,29 @@ auction reveals the rest of it; Home goes back to the start of the auction.
 | B | back to the actual play after a variation |
 | A | auto-play the record |
 | Home | back to the start (of the auction in call-by-call mode) |
+| 1 2 3 4 | show / hide North, East, South, West |
+| 0 | show all hands |
 | PageDown / PageUp | next / previous board (not while recording) |
 
 Click a card in the hand whose turn it is to play it (follow suit is
 enforced). A card that differs from the record starts a **variation**, shown
 on the stage; "back to actual play" (B) returns to the record.
+
+## Hiding hands
+
+Each hand can be hidden per board: its seat name stays, the cards are replaced
+by a plain "hidden" plate of the same size. Use the **Hands** toolbar group
+(N E S W toggles, Alt+click = only that hand; presets All, N-S, E-W,
+Decl+dummy; "Only…"), keys 1–4 / 0, or click a seat name on the stage. All of
+these work while recording; the toolbar is never in the video.
+**Apply to all boards** copies the current board's setting to every board.
+In the side panel, "show a hidden dummy after the opening lead" makes dummy
+appear once the lead is on the table (and disappear again if you step back).
+
+Cards played from a hidden hand still appear in the trick. A hidden hand's
+cards cannot be clicked; when it is its turn, the presenter bar below the stage
+says so: press → to play the recorded card, or show the hand.
+The choice is saved with the board (`hidden` in the session file).
 
 ## Other tables' results from BBO
 

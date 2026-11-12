@@ -13,6 +13,19 @@
         <button :class="{ on: auctionDefault === 'whole' }" @click="auctionDefault = 'whole'">Whole auction</button>
         <button :class="{ on: auctionDefault === 'step' }" @click="auctionDefault = 'step'">Call by call</button>
       </div>
+      <div class="tb-group hands" title="Hands shown on the stage (keys 1-4, 0 = all; Alt+click = only this hand)">
+        <label>Hands</label>
+        <button v-for="s in SEATS" :key="s" class="seat-btn" :class="{ on: !boardHidden.includes(s) }" @click="(e) => (e.altKey ? setHidden(onlySeat(s)) : toggleHand(s))">{{ s }}</button>
+        <button @click="setHidden(presetHidden('all'))">All</button>
+        <button @click="setHidden(presetHidden('NS'))">N-S</button>
+        <button @click="setHidden(presetHidden('EW'))">E-W</button>
+        <button @click="setHidden(presetHidden('declarerDummy', play.fullContract.value))" :disabled="!play.playable.value">Decl+dummy</button>
+        <select :value="''" @change="onlyFromSelect" title="Show only one hand">
+          <option value="">Only…</option>
+          <option v-for="s in SEATS" :key="s" :value="s">only {{ s }}</option>
+        </select>
+        <button @click="applyHiddenToAll" :disabled="!session" title="Copy this board's hand visibility to every board">Apply to all boards</button>
+      </div>
       <div class="tb-group">
         <label>Camera</label>
         <select v-model="media.camId.value" title="Camera">
@@ -85,6 +98,7 @@
           </details>
         </div>
         <div class="note-edit" v-if="board">
+          <label class="chk"><input type="checkbox" :checked="!!board.showDummyAfterLead" @change="setDummyAfterLead(($event.target as HTMLInputElement).checked)" /> show a hidden dummy after the opening lead</label>
           <label>Auction on board {{ board.number ?? index + 1 }}</label>
           <select :value="board.auctionMode ?? ''" @change="setBoardMode(($event.target as HTMLSelectElement).value)">
             <option value="">as toolbar ({{ auctionDefault === "step" ? "call by call" : "whole" }})</option>
@@ -109,7 +123,7 @@
           <p>Open your BBO hand records (Myhands, "Get Hands"), click the bookmark, pick a tournament. It downloads a <code>.session.json</code> to open here. Nothing is sent anywhere. See docs/BBO_COLLECT.md.</p>
         </details>
         <div class="keys">
-          <b>Keys</b> → / N next call or card · ← / Z back · Shift+→ rest of auction / trick · Shift+← trick back · B back to actual · A auto · Home restart · PgUp/PgDn board · R record/stop · P pause · H head · Esc stop
+          <b>Keys</b> → / N next call or card · ← / Z back · Shift+→ rest of auction / trick · Shift+← trick back · B back to actual · A auto · Home restart · PgUp/PgDn board · R record/stop · P pause · 1 2 3 4 show/hide N E S W · 0 all hands · H head · Esc stop
         </div>
       </aside>
 
@@ -117,7 +131,7 @@
         <div class="fit" ref="fitBox">
           <div class="stage-outer" v-if="board" :style="{ width: 1920 * scale + 'px', height: 1080 * scale + 'px' }">
             <div class="stage-scaler" ref="stageEl" :style="{ transform: `scale(${scale})` }">
-              <stage :board="board" :play="play" :title="session!.title" :date="session!.date" :scoring="session!.scoring">
+              <stage :board="board" :play="play" :title="session!.title" :date="session!.date" :scoring="session!.scoring" :hidden="hiddenNow" @toggle-seat="toggleHand">
                 <head-circle
                   :stream="media.camStream.value"
                   :size="HEAD_SIZES[head.size]"
@@ -142,6 +156,7 @@
           <button @click="play.toggleAuto()" :class="{ on: play.auto.value }" :disabled="!play.canNext.value && !play.auto.value" title="A">auto</button>
           <button class="back" @click="play.toActual()" :disabled="play.variation.value === undefined" title="B">back to actual play</button>
           <span class="hint" v-if="play.variation.value !== undefined">variation from card {{ play.variation.value + 1 }}</span>
+          <span class="hint warn-turn" v-else-if="hiddenTurn">{{ hiddenTurn }}</span>
           <span class="hint" v-else-if="play.inAuction.value">auction: call {{ play.callsShown.value }} of {{ play.totalCalls.value }}</span>
           <span class="hint" v-else-if="play.playable.value && !board.play.length">no recorded play: click cards to play</span>
           <span class="spacer"></span>
@@ -169,11 +184,12 @@ import Stage from "./components/Stage.vue";
 import HeadCircle from "./components/HeadCircle.vue";
 import { useBoardPlay } from "./useBoardPlay";
 import { AuctionMode, effectiveMode } from "./model/steps";
+import { effectiveHidden, onlySeat, presetHidden, toggleSeat } from "./model/visibility";
 import { useMedia } from "./useMedia";
 import { loadSession, sessionFromLin, sessionToJson, SessionError } from "./model/session";
 import { parsePbn } from "./model/pbn";
 import { boardContract } from "./model/boardContract";
-import { StudioBoard, StudioSession, SUIT_SYMBOL } from "./model/types";
+import { Seat, SEATS, SEAT_NAMES, StudioBoard, StudioSession, SUIT_SYMBOL } from "./model/types";
 import { importLin } from "@/presentations/class/lin";
 import { captureStage, clipFileName, extensionFor, formatDuration, StageCapture, TakeRecorder } from "./recording/recorder";
 import { deleteTake, listTakes, saveTake, sessionKeyOf, Take } from "./recording/takes";
@@ -275,6 +291,46 @@ function setBoardMode(v: string) {
   if (v === "whole" || v === "step") board.value.auctionMode = v;
   else delete board.value.auctionMode;
 }
+
+// ---- hand visibility (per board, saved in the session) ---------------------
+const boardHidden = computed<Seat[]>(() => board.value?.hidden ?? []);
+const hiddenNow = computed(() => effectiveHidden(board.value?.hidden, board.value?.showDummyAfterLead, play.fullContract.value, play.line.value.length));
+function setHidden(h: Seat[]) {
+  if (!board.value) return;
+  if (h.length) board.value.hidden = [...h];
+  else delete board.value.hidden;
+}
+function toggleHand(s: Seat) {
+  setHidden(toggleSeat(boardHidden.value, s));
+}
+function onlyFromSelect(e: Event) {
+  const el = e.target as HTMLSelectElement;
+  if (SEATS.includes(el.value as Seat)) setHidden(onlySeat(el.value as Seat));
+  el.value = "";
+}
+function applyHiddenToAll() {
+  if (!session.value || !board.value) return;
+  const h = boardHidden.value;
+  const dal = board.value.showDummyAfterLead;
+  for (const b of session.value.boards) {
+    if (h.length) b.hidden = [...h];
+    else delete b.hidden;
+    if (dal) b.showDummyAfterLead = true;
+    else delete b.showDummyAfterLead;
+  }
+}
+function setDummyAfterLead(on: boolean) {
+  if (!board.value) return;
+  if (on) board.value.showDummyAfterLead = true;
+  else delete board.value.showDummyAfterLead;
+}
+/** presenter-only hint when the hand to play is hidden */
+const hiddenTurn = computed(() => {
+  const s = play.state.value?.toPlay;
+  if (!s || play.inAuction.value || !hiddenNow.value.includes(s)) return "";
+  const key = String(SEATS.indexOf(s) + 1);
+  return play.canNext.value ? `${SEAT_NAMES[s]} to play (hand hidden): next plays the recorded card, ${key} shows the hand` : `${SEAT_NAMES[s]} to play, hand hidden: press ${key} to show it`;
+});
 
 function goTo(i: number) {
   if (!session.value || recording.value) return;
@@ -526,6 +582,8 @@ function onKey(e: KeyboardEvent) {
   else if (k === "r" || k === "R") recState.value === "idle" ? startTake() : stopTake();
   else if (k === "p" || k === "P") togglePause();
   else if (k === "h" || k === "H") head.visible = !head.visible;
+  else if (k >= "1" && k <= "4" && k.length === 1) toggleHand(SEATS[parseInt(k) - 1]);
+  else if (k === "0") setHidden([]);
   else if (k === "Escape") previewUrl.value ? closePreview() : stopTake();
   else handled = false;
   if (handled) e.preventDefault();
@@ -613,6 +671,18 @@ body,
       color: #9a9ca3;
       margin-left: 4px;
     }
+  }
+  .hands .seat-btn {
+    min-width: 26px;
+    font-weight: 700;
+  }
+  .warn-turn {
+    color: #ffcc80 !important;
+  }
+  .chk {
+    display: flex;
+    gap: 6px;
+    align-items: center;
   }
   .seg button {
     margin: 0 -3px 0 0;

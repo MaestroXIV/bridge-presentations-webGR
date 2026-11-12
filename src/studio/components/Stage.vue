@@ -8,7 +8,7 @@
       <results-panel v-if="hasLeft" :board="board" :scoring="scoring" />
     </section>
     <section class="zone-centre">
-      <deal-panel :board="board" :play="play" :scoring="scoring" />
+      <deal-panel :board="board" :play="play" :scoring="scoring" :hidden="hidden" @toggle-seat="(s) => emit('toggle-seat', s)" />
     </section>
     <section class="zone-right">
       <auction-table :board="board" :shown="play.callsShown.value" />
@@ -22,10 +22,11 @@ import { computed, ref } from "vue";
 import DealPanel from "./DealPanel.vue";
 import AuctionTable from "./AuctionTable.vue";
 import ResultsPanel from "./ResultsPanel.vue";
-import { Scoring, StudioBoard } from "../model/types";
+import { Scoring, Seat, StudioBoard } from "../model/types";
 import type { BoardPlay } from "../useBoardPlay";
 
-const props = defineProps<{ board: StudioBoard; play: BoardPlay; title: string; date?: string; scoring?: Scoring }>();
+const props = defineProps<{ board: StudioBoard; play: BoardPlay; title: string; date?: string; scoring?: Scoring; hidden?: Seat[] }>();
+const emit = defineEmits<{ (e: "toggle-seat", seat: Seat): void }>();
 const root = ref<HTMLElement>();
 const hasLeft = computed(() => (props.board.travellers?.length ?? 0) > 0 || !!props.board.note?.trim());
 defineExpose({ root });

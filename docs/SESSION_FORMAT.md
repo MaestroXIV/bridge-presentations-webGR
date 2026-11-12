@@ -66,6 +66,8 @@ A complete example: [`examples/sample-session.json`](examples/sample-session.jso
 | `claim` | no | total tricks for declarer when the play ended with a claim |
 | `note` | no | short text for the left zone when there are no travellers (blank line = new paragraph) |
 | `scoring` | no | overrides the session's scoring |
+| `hidden` | no | seats whose cards are not shown, e.g. `["E","W"]`; missing = all hands shown |
+| `showDummyAfterLead` | no | `true`: a hidden dummy is shown once the opening lead has been played |
 | `auctionMode` | no | `"whole"` (all calls shown at once) or `"step"` (revealed call by call before the play); overrides the toolbar default for this board |
 | `mySide` | no | `"NS"` or `"EW"`: results are shown from this side. Default: from `me` and `players`, else N-S |
 | `travellers` | no | other tables' results, see below. A board may have none (e.g. the traveller could not be fetched) |

@@ -103,6 +103,7 @@ export function useBoardPlay(board: Ref<StudioBoard | undefined>, mode: Ref<Auct
     totalCalls,
     inAuction,
     contract,
+    fullContract,
     playable,
     state,
     variation,

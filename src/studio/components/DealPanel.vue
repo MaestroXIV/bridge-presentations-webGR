@@ -16,10 +16,11 @@
 
       <div v-for="seat in SEATS" :key="seat" class="hand" :class="['hand-' + seat, { 'to-play': play.state.value?.toPlay === seat }]">
         <div class="seat-name">
-          <span class="seat-label" :class="{ vul: isVul(board.vul, sideOf(seat)) }">{{ SEAT_NAMES[seat] }}</span>
+          <span class="seat-label" :class="{ vul: isVul(board.vul, sideOf(seat)) }" title="Show / hide this hand" @click="emit('toggle-seat', seat)">{{ SEAT_NAMES[seat] }}</span>
           <span class="player" v-if="board.players?.[seat]">{{ board.players[seat] }}</span>
         </div>
-        <div v-for="suit in SUITS" :key="suit" class="suit-row">
+        <div v-if="hiddenSet.has(seat)" class="hidden-plate">hidden</div>
+        <div v-else v-for="suit in SUITS" :key="suit" class="suit-row">
           <span class="sym" :class="'suit-' + suit">{{ symbol(suit) }}</span>
           <span class="ranks">
             <span
@@ -75,7 +76,9 @@ import { parseDotHand } from "../model/play";
 import { Scoring, Seat, SEATS, SEAT_NAMES, StudioBoard, SUIT_SYMBOL, isVul, nextSeat, sideOf } from "../model/types";
 import type { BoardPlay } from "../useBoardPlay";
 
-const props = defineProps<{ board: StudioBoard; play: BoardPlay; scoring?: Scoring }>();
+const props = defineProps<{ board: StudioBoard; play: BoardPlay; scoring?: Scoring; /** seats whose cards are not shown */ hidden?: Seat[] }>();
+const emit = defineEmits<{ (e: "toggle-seat", seat: Seat): void }>();
+const hiddenSet = computed(() => new Set(props.hidden ?? []));
 const SUITS = ["S", "H", "D", "C"];
 
 const symbol = (s: string) => (s === "N" ? "NT" : SUIT_SYMBOL[s]);
@@ -218,6 +221,24 @@ const scoringText = computed(() => {
     margin-left: 10px;
     font-size: 20px;
   }
+}
+.seat-label {
+  cursor: pointer;
+}
+.hidden-plate {
+  /* same footprint as four suit rows, so nothing moves when a hand is hidden */
+  width: 230px;
+  height: 176px;
+  border: 2px dashed #d8cbad;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #b3a78c;
+  font-size: 20px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 .suit-row {
   display: flex;
