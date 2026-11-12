@@ -70,6 +70,10 @@ export interface StudioBoard {
   mySide?: Side;
   /** "whole" or "step" (call by call); overrides the presenter's default for this board */
   auctionMode?: "whole" | "step";
+  /** BBO traveller link of the board (kept for reference / later fetching) */
+  travellerUrl?: string;
+  /** tournament the board belongs to, when a file holds several */
+  tournament?: string;
   /** where the board came from, e.g. "PBN", "BBO LIN" */
   source?: string;
 }

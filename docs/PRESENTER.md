@@ -40,6 +40,11 @@ Click a card in the hand whose turn it is to play it (follow suit is
 enforced). A card that differs from the record starts a **variation**, shown
 on the stage; "back to actual play" (B) returns to the record.
 
+## Other tables' results from BBO
+
+Use the bookmarklet collector on your BBO hand records to download a session
+with every board's traveller: [BBO_COLLECT.md](BBO_COLLECT.md).
+
 ## Recording
 
 1. Choose camera and microphone, switch the camera on (Cam), check the mic

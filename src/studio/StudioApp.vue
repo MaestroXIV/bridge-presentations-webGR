@@ -60,7 +60,9 @@
           Open a session JSON, a PBN file, a LIN file or a saved BBO Myhands page — or load the sample. Everything stays in this browser.
         </div>
         <ul class="boards" v-if="session">
-          <li v-for="(b, i) in session.boards" :key="b.id" :class="{ current: i === index }" @click="goTo(i)">
+          <template v-for="(b, i) in session.boards" :key="b.id">
+          <li v-if="b.tournament && b.tournament !== session.boards[i - 1]?.tournament" class="tour-head">{{ b.tournament }}</li>
+          <li :class="{ current: i === index }" @click="goTo(i)">
             <span class="b-no">{{ b.number ?? i + 1 }}</span>
             <span class="b-what">{{ boardLabel(b) }}</span>
             <span class="b-take" v-if="takes[b.id]">
@@ -71,6 +73,7 @@
             </span>
             <span class="b-take none" v-else>no take</span>
           </li>
+          </template>
         </ul>
         <div class="side-actions" v-if="session">
           <button @click="downloadAll" :disabled="takeCount === 0">Download all ({{ takeCount }})</button>
@@ -99,6 +102,12 @@
             <div v-for="(w, i) in warnings" :key="i">{{ w }}</div>
           </details>
         </div>
+        <details class="collector">
+          <summary>Collect a session from BBO</summary>
+          <p>Drag this link to the bookmarks bar:</p>
+          <a class="bm" :href="bookmarklet" @click.prevent>BBO → presenter</a>
+          <p>Open your BBO hand records (Myhands, "Get Hands"), click the bookmark, pick a tournament. It downloads a <code>.session.json</code> to open here. Nothing is sent anywhere. See docs/BBO_COLLECT.md.</p>
+        </details>
         <div class="keys">
           <b>Keys</b> → / N next call or card · ← / Z back · Shift+→ rest of auction / trick · Shift+← trick back · B back to actual · A auto · Home restart · PgUp/PgDn board · R record/stop · P pause · H head · Esc stop
         </div>
@@ -169,11 +178,13 @@ import { importLin } from "@/presentations/class/lin";
 import { captureStage, clipFileName, extensionFor, formatDuration, StageCapture, TakeRecorder } from "./recording/recorder";
 import { deleteTake, listTakes, saveTake, sessionKeyOf, Take } from "./recording/takes";
 import { HANDOFF_KEY } from "./handoff";
+import bookmarkletRaw from "../../docs/bbo-collect.bookmarklet.txt?raw";
 import sampleText from "../../docs/examples/sample-session.json?raw";
 
 const LS_SESSION = "bridge-presenter-session";
 const LS_HEAD = "bridge-presenter-head";
 const HEAD_SIZES = { S: 190, M: 270, L: 370 } as const;
+const bookmarklet = bookmarkletRaw.trim();
 
 const session = ref<StudioSession>();
 const index = ref(0);
@@ -722,6 +733,31 @@ body,
     .mini {
       padding: 0 5px;
       font-size: 11px;
+    }
+  }
+  .boards .tour-head {
+    display: block;
+    cursor: default;
+    color: #9cc3ff;
+    font-size: 12px;
+    padding: 8px 4px 2px;
+    &:hover {
+      background: none;
+    }
+  }
+  .collector {
+    color: #bbb;
+    p {
+      margin: 4px 0;
+    }
+    .bm {
+      display: inline-block;
+      padding: 4px 10px;
+      background: #3b4a5e;
+      color: #fff;
+      border-radius: 4px;
+      text-decoration: none;
+      cursor: grab;
     }
   }
   .side-actions {

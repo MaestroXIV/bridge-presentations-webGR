@@ -144,6 +144,8 @@ function normalizeBoard(raw: Record<string, unknown>, index: number, warnings: s
     scoring,
     travellers,
     mySide,
+    ...(typeof raw.travellerUrl === "string" ? { travellerUrl: raw.travellerUrl } : {}),
+    ...(typeof raw.tournament === "string" ? { tournament: raw.tournament } : {}),
     source: typeof raw.source === "string" ? raw.source : "session",
   };
 }
@@ -216,6 +218,8 @@ export function boardFromLin(b: LinBoard, index: number): StudioBoard {
     auction,
     play,
     claim,
+    ...(b.tournament ? { tournament: b.tournament } : {}),
+    ...(b.travellerUrl ? { travellerUrl: b.travellerUrl } : {}),
     note: b.result ? `At our table: ${b.result.contract}${b.result.score !== undefined ? `, ${b.result.score > 0 ? "+" : ""}${b.result.score}` : ""}${b.result.percent ? `, ${b.result.percent}` : ""}` : undefined,
     source: "BBO LIN",
   };
@@ -228,7 +232,9 @@ export function sessionFromLin(imp: LinImport, fallbackTitle = "BBO session"): S
     while (seen.has(b.id)) b.id += "x";
     seen.add(b.id);
   }
-  return { title: imp.title ?? fallbackTitle, boards };
+  const tours = [...new Set(boards.map((b) => b.tournament).filter(Boolean))] as string[];
+  const title = tours.length === 1 ? tours[0].replace(/^#\d+\s+/, "") : imp.title ?? fallbackTitle;
+  return { title, boards };
 }
 
 /** Sorted card list of a hand, for display. */
