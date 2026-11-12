@@ -15,7 +15,7 @@ import { Trick } from "@/bridge/model/Trick";
 import { Parser } from "@/bridge/utils/Parser";
 
 export type ScriptAction =
-  | { t: "bid"; bid: string } // "1S", "1N", "P", "X", "XX"
+  | { t: "bid"; bid: string; alert?: string } // "1S", "1N", "P", "X", "XX"; alert = explanation when alerted
   | { t: "play"; card: string } // "SA", "HT", "C2"
   | { t: "claim"; tricks: number }; // total tricks claimed by declarer's side
 

@@ -1,0 +1,36 @@
+% Sample lesson file for the presenter (PBN 2.1 subset)
+[Event "Lesson 3: drawing trumps"]
+[Board "1"]
+[Dealer "N"]
+[Vulnerable "NS"]
+[Deal "N:KQ97.Q9.AK54.J75 JT85.A74.863.Q6 A643.KJT8.92.AK3 2.9653.QJT7.T9842"]
+[North "Nora"]
+[East "Ed"]
+[South "Sue"]
+[West "Wes"]
+[Scoring "MP"]
+[Declarer "N"]
+[Contract "4S"]
+[Result "10"]
+{Count losers first: one spade, one heart, one club at most.}
+[Auction "N"]
+1S Pass 4S =1= Pass
+Pass Pass
+[Note "1:to play, 13+ HCP"]
+[Play "E"]
+D8 D2 DT DK
+D3 D9 D7 D5
+- - - -
+*
+
+[Event "#"]
+[Board "2"]
+[Dealer "E"]
+[Vulnerable "NS"]
+[Deal "E:3.976.T87.AQ9754 KJ5.AQ3.KJ54.K82 QT986.T42.A63.JT A742.KJ85.Q92.63"]
+[Auction "E"]
+Pass 1NT =1= Pass 2C =2=
+Pass 2H Pass 4H
+AP
+[Note "1:15-17"]
+[Note "2:Stayman"]

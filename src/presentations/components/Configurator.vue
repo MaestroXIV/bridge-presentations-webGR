@@ -8,6 +8,7 @@
                 <button class="btn btn-secondary" @click="loadClicked">Load scene</button>
                 <button class="btn btn-secondary" :class="{ 'btn-active': showImport }" @click="showImport = !showImport">Import LIN</button>
                 <button class="btn btn-secondary" @click="openAudienceWindow()" title="Opens a second window that shows only the table; drag it to the projector or share it in your video call">Audience window</button>
+                <button class="btn btn-secondary" @click="openPresenterWith(options)" title="Record session analyses and lessons: deal, auction, results, webcam circle">Presenter mode</button>
                 <button class="btn btn-primary btn-large" @click="submit">Start Game</button>
             </div>
         </div>
@@ -389,6 +390,7 @@ import Arrow from "@/presentations/components/partial/Arrow.vue";
 import { ref, reactive } from "vue";
 import { DealLike, generateDeal, generateDealWithCards } from "../class/deal-generator";
 import { LinBoard, importLin } from "../class/lin";
+import { openPresenterWith } from "@/studio/handoff";
 import { contractToShortString, simulateScript } from "../class/script";
 import { openAudienceWindow } from "../class/transport";
 

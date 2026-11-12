@@ -47,6 +47,17 @@ The two windows talk through the browser's `BroadcastChannel`, so they must be
 open in the same browser profile on the same machine; nothing is sent to a
 server.
 
+### Presenter mode (recording analyses and lessons)
+
+Click **Presenter mode** in the editor (or open the app with
+`?mode=presenter`). It shows a 16:9 stage with the deal, the auction, other
+tables' results and your webcam in a circle, and records one clip per board
+(stage + microphone) that you download and publish yourself. It opens session
+JSON files (with other tables' results), PBN lesson files, LIN files and saved
+Myhands pages. Everything stays in the browser. See
+[docs/PRESENTER.md](docs/PRESENTER.md) and the session format in
+[docs/SESSION_FORMAT.md](docs/SESSION_FORMAT.md).
+
 ## Development docs
 
 Development docs can be found [here](DEVELOPMENT.md).

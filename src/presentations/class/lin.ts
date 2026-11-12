@@ -9,7 +9,7 @@
  *
  * Tokens used: pn (player names S,W,N,E), md (dealer digit + hands S,W,N,E),
  * sv (vulnerability o/n/e/b), ah / qx (board name), mb (bid), pc (played
- * card), mc (claim). Everything else (an, nt, pg, st, rh, vg, rs, …) is skipped.
+ * card), mc (claim). an (alert explanation of the last bid). Everything else (nt, pg, st, rh, vg, rs, …) is skipped.
  */
 import { Position } from "@/bridge/model/Position";
 import { Vulnerability } from "@/bridge/model/Vulnerability";
@@ -30,6 +30,9 @@ export interface LinBoard {
   number?: number;
   /** result columns from a Myhands table, if imported from one */
   result?: LinBoardResult;
+  /** Myhands: the tournament this board belongs to, and its traveller link */
+  tournament?: string;
+  travellerUrl?: string;
   players: { north: string; east: string; south: string; west: string };
   dealer: Position;
   vulnerability: Vulnerability;
@@ -188,10 +191,16 @@ export function parseMyhandsHtml(htmlText: string): LinImport {
     .filter(Boolean)
     .join(" · ") || undefined;
 
-  const rowRe = /<tr class="tourney">(.*?)<\/tr>/gs;
+  // tournament summary rows, by position, so each board knows its tournament
+  const summaries = [...htmlText.matchAll(/<tr class="tourneySummary">.*?<td class="tourneyName"[^>]*>(.*?)<\/td>/gs)].map((m) => ({
+    at: m.index ?? 0,
+    name: cellText(m[1]),
+  }));
+  const rowRe = /<tr class="(?:tourney|mbc|team)">(.*?)<\/tr>/gs;
   let row: RegExpExecArray | null;
   while ((row = rowRe.exec(htmlText))) {
     const r = row[1];
+    const at = row.index;
     const lin = r.match(/hv_popuplin\('((?:[^'\\]|\\.)*)'\)/);
     if (!lin) continue;
     const linText = lin[1].replace(/\\'/g, "'");
@@ -214,6 +223,10 @@ export function parseMyhandsHtml(htmlText: string): LinImport {
       score: isNaN(score) ? undefined : score,
       percent: scoreCells[1] ?? "",
     };
+    const tour = summaries.filter((x) => x.at < at).pop();
+    if (tour) b.tournament = tour.name;
+    const trav = r.match(/<td class="traveller"[^>]*>.*?href="([^"]+)"/is);
+    if (trav) b.travellerUrl = trav[1].replace(/&amp;/g, "&");
     b.script.label = `BBO — ${b.name}${b.result.contract ? " · " + b.result.contract : ""}`;
     boards.push(b);
   }
@@ -270,8 +283,14 @@ export function parseLin(input: string): LinBoard[] {
       case "mb": {
         if (!cur) break;
         const bid = normalizeBidString(value);
-        if (bid) cur.actions.push({ t: "bid", bid });
+        if (bid) cur.actions.push(/!/.test(value) ? { t: "bid", bid, alert: "" } : { t: "bid", bid });
         else cur.warnings.push(`unknown bid "${value}"`);
+        break;
+      }
+      case "an": {
+        // annotation (alert explanation) of the bid just made
+        const last = cur?.actions[cur.actions.length - 1];
+        if (last && last.t === "bid") last.alert = value;
         break;
       }
       case "pc": {
@@ -288,7 +307,7 @@ export function parseLin(input: string): LinBoard[] {
         break;
       }
       default:
-        break; // an, nt, pg, st, rh, vg, rs, mn, sk, …
+        break; // nt, pg, st, rh, vg, rs, mn, sk, …
     }
   }
 

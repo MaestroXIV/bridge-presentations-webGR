@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc && vite build",
+    "build": "npm run build:collector && vue-tsc && vite build",
     "preview": "vite preview",
     "lint": " npx prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:collector": "vite build --config vite.collector.config.ts"
   },
   "dependencies": {
     "@bridge-tools/generator": "^0.2.2",
