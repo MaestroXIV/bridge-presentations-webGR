@@ -38,7 +38,7 @@
 import { computed } from "vue";
 import { Seat, SEAT_NAMES, StudioBoard, SUIT_SYMBOL, isVul, sideOf } from "../model/types";
 
-const props = defineProps<{ board: StudioBoard }>();
+const props = defineProps<{ board: StudioBoard; /** calls revealed so far (call-by-call mode); default all */ shown?: number }>();
 const COLS: Seat[] = ["W", "N", "E", "S"];
 
 interface Cell {
@@ -51,12 +51,14 @@ interface Cell {
 }
 
 const model = computed(() => {
-  const calls = props.board.auction;
+  const all = props.board.auction;
+  const calls = all.slice(0, props.shown ?? all.length);
+  const complete = calls.length === all.length;
   const notes: { no: number; text: string }[] = [];
   const cells: (Cell | undefined)[] = [];
   for (let i = 0; i < COLS.indexOf(props.board.dealer); i++) cells.push(undefined);
   let end = calls.length;
-  const allPass = calls.length >= 4 && calls.slice(-3).every((c) => c.call === "P") && calls.some((c) => c.call !== "P") && calls.slice(-3).every((c) => c.alert === undefined);
+  const allPass = complete && calls.length >= 4 && calls.slice(-3).every((c) => c.call === "P") && calls.some((c) => c.call !== "P") && calls.slice(-3).every((c) => c.alert === undefined);
   if (allPass) end -= 3;
   calls.slice(0, end).forEach((c) => {
     const cell: Cell = {};

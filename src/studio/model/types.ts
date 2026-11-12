@@ -68,6 +68,8 @@ export interface StudioBoard {
   travellers?: Traveller[];
   /** which side the presenter sat; results are shown from this side */
   mySide?: Side;
+  /** "whole" or "step" (call by call); overrides the presenter's default for this board */
+  auctionMode?: "whole" | "step";
   /** where the board came from, e.g. "PBN", "BBO LIN" */
   source?: string;
 }

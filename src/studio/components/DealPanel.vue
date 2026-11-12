@@ -36,7 +36,7 @@
       </div>
 
       <div class="trick-area">
-        <div v-if="!shownTrick && play.playable.value" class="lead-hint">{{ leaderName }} to lead</div>
+        <div v-if="!shownTrick && play.playable.value && !play.inAuction.value" class="lead-hint">{{ leaderName }} to lead</div>
         <template v-if="shownTrick">
           <div
             v-for="pc in shownTrick.cards"
@@ -55,10 +55,11 @@
     <div class="play-bar">
       <button class="pb-btn" :disabled="!play.canPrev.value" @click="play.prev()">◀ PREV</button>
       <div class="pb-mid">
-        <span class="pb-trick" v-if="!play.playable.value">{{ contractInfo?.passed ? "PASSED OUT" : "NO CONTRACT" }}</span>
+        <span class="pb-trick" v-if="play.inAuction.value">AUCTION {{ play.callsShown.value }} / {{ play.totalCalls.value }}</span>
+        <span class="pb-trick" v-else-if="!play.playable.value">{{ contractInfo?.passed ? "PASSED OUT" : "NO CONTRACT" }}</span>
         <span class="pb-trick" v-else-if="play.trickNo.value === 0">OPENING LEAD</span>
         <span class="pb-trick" v-else>TRICK {{ play.trickNo.value }} / 13</span>
-        <span class="pb-count" v-if="play.playable.value">N-S {{ play.state.value?.ns ?? 0 }} · E-W {{ play.state.value?.ew ?? 0 }}</span>
+        <span class="pb-count" v-if="play.playable.value && !play.inAuction.value">N-S {{ play.state.value?.ns ?? 0 }} · E-W {{ play.state.value?.ew ?? 0 }}</span>
         <span class="pb-var" v-if="play.variation.value !== undefined">VARIATION</span>
         <span class="pb-claim" v-else-if="play.claimed.value !== undefined">Claim: {{ play.claimed.value }} tricks for declarer</span>
       </div>
@@ -112,7 +113,7 @@ const contractInfo = computed(() => {
   return { passed: false, level: c.level, strain: c.strain, declarer: c.declarer, dbl: c.doubled === 1 ? "×" : c.doubled === 2 ? "××" : "" };
 });
 const leaderName = computed(() => {
-  const c = props.play.contract.value;
+  const c = props.play.contract.value; // undefined until the auction is complete
   return c && c !== "passed" ? SEAT_NAMES[nextSeat(c.declarer)] : "";
 });
 const vulText = computed(() => ({ None: "None vul", NS: "N-S vul", EW: "E-W vul", All: "Both vul" })[props.board.vul]);

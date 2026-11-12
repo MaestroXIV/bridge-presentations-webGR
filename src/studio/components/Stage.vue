@@ -11,7 +11,7 @@
       <deal-panel :board="board" :play="play" :scoring="scoring" />
     </section>
     <section class="zone-right">
-      <auction-table :board="board" />
+      <auction-table :board="board" :shown="play.callsShown.value" />
     </section>
     <slot />
   </div>

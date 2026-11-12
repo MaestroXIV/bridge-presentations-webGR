@@ -9,6 +9,10 @@
         <button @click="loadSample" :disabled="busy">Sample</button>
         <button @click="saveSession" :disabled="!session">Save session</button>
       </div>
+      <div class="tb-group seg" title="How the auction appears when a board opens">
+        <button :class="{ on: auctionDefault === 'whole' }" @click="auctionDefault = 'whole'">Whole auction</button>
+        <button :class="{ on: auctionDefault === 'step' }" @click="auctionDefault = 'step'">Call by call</button>
+      </div>
       <div class="tb-group">
         <label>Camera</label>
         <select v-model="media.camId.value" title="Camera">
@@ -78,6 +82,12 @@
           </details>
         </div>
         <div class="note-edit" v-if="board">
+          <label>Auction on board {{ board.number ?? index + 1 }}</label>
+          <select :value="board.auctionMode ?? ''" @change="setBoardMode(($event.target as HTMLSelectElement).value)">
+            <option value="">as toolbar ({{ auctionDefault === "step" ? "call by call" : "whole" }})</option>
+            <option value="whole">whole auction</option>
+            <option value="step">call by call</option>
+          </select>
           <label>Note for board {{ board.number ?? index + 1 }} <small>(shown on the left when there are no results)</small></label>
           <textarea v-model="board.note" rows="4" placeholder="Optional short note"></textarea>
         </div>
@@ -90,7 +100,7 @@
           </details>
         </div>
         <div class="keys">
-          <b>Keys</b> → / N next card · ← / Z back · Shift+←/→ trick · B back to actual · A auto · Home restart · PgUp/PgDn board · R record/stop · P pause · H head · Esc stop
+          <b>Keys</b> → / N next call or card · ← / Z back · Shift+→ rest of auction / trick · Shift+← trick back · B back to actual · A auto · Home restart · PgUp/PgDn board · R record/stop · P pause · H head · Esc stop
         </div>
       </aside>
 
@@ -123,6 +133,7 @@
           <button @click="play.toggleAuto()" :class="{ on: play.auto.value }" :disabled="!play.canNext.value && !play.auto.value" title="A">auto</button>
           <button class="back" @click="play.toActual()" :disabled="play.variation.value === undefined" title="B">back to actual play</button>
           <span class="hint" v-if="play.variation.value !== undefined">variation from card {{ play.variation.value + 1 }}</span>
+          <span class="hint" v-else-if="play.inAuction.value">auction: call {{ play.callsShown.value }} of {{ play.totalCalls.value }}</span>
           <span class="hint" v-else-if="play.playable.value && !board.play.length">no recorded play: click cards to play</span>
           <span class="spacer"></span>
           <button @click="goTo(index - 1)" :disabled="index <= 0 || recording">◀ board</button>
@@ -148,6 +159,7 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from
 import Stage from "./components/Stage.vue";
 import HeadCircle from "./components/HeadCircle.vue";
 import { useBoardPlay } from "./useBoardPlay";
+import { AuctionMode, effectiveMode } from "./model/steps";
 import { useMedia } from "./useMedia";
 import { loadSession, sessionFromLin, sessionToJson, SessionError } from "./model/session";
 import { parsePbn } from "./model/pbn";
@@ -169,7 +181,11 @@ const warnings = ref<string[]>([]);
 const errors = ref<string[]>([]);
 const busy = ref(false);
 const board = computed<StudioBoard | undefined>(() => session.value?.boards[index.value]);
-const play = useBoardPlay(board);
+const LS_AUCTION = "bridge-presenter-auction-mode";
+const auctionDefault = ref<AuctionMode>(localStorage.getItem(LS_AUCTION) === "step" ? "step" : "whole");
+watch(auctionDefault, (m) => localStorage.setItem(LS_AUCTION, m));
+const auctionMode = computed<AuctionMode>(() => effectiveMode(board.value?.auctionMode, auctionDefault.value));
+const play = useBoardPlay(board, auctionMode);
 const media = useMedia();
 const fileInput = ref<HTMLInputElement>();
 const fitBox = ref<HTMLElement>();
@@ -241,6 +257,12 @@ function boardLabel(b: StudioBoard) {
   if (!c) return b.title ?? "";
   if (c === "passed") return "passed out";
   return `${c.level}${c.strain === "N" ? "NT" : SUIT_SYMBOL[c.strain]}${c.doubled === 1 ? "×" : c.doubled === 2 ? "××" : ""} ${c.declarer}`;
+}
+
+function setBoardMode(v: string) {
+  if (!board.value) return;
+  if (v === "whole" || v === "step") board.value.auctionMode = v;
+  else delete board.value.auctionMode;
 }
 
 function goTo(i: number) {
@@ -580,6 +602,9 @@ body,
       color: #9a9ca3;
       margin-left: 4px;
     }
+  }
+  .seg button {
+    margin: 0 -3px 0 0;
   }
   .tb-link {
     color: #9cc3ff;

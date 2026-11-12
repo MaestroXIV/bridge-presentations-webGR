@@ -140,6 +140,7 @@ function normalizeBoard(raw: Record<string, unknown>, index: number, warnings: s
     claim: typeof raw.claim === "number" ? raw.claim : undefined,
     ...(typeof raw.contract === "string" && seatOf(raw.declarer) ? { contract: raw.contract, declarer: seatOf(raw.declarer) } : {}),
     note: typeof raw.note === "string" ? raw.note : undefined,
+    ...(raw.auctionMode === "whole" || raw.auctionMode === "step" ? { auctionMode: raw.auctionMode as "whole" | "step" } : {}),
     scoring,
     travellers,
     mySide,

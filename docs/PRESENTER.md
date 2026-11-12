@@ -18,14 +18,22 @@ stage goes into the video.
 
 ## Playing
 
+The toolbar switch **Whole auction / Call by call** sets how the auction
+appears (remembered in this browser); the side panel can override it per board
+(saved in the session as `auctionMode`). Call by call: a board opens with no
+calls shown; next/back step through the calls (an alert's note appears with its
+call), the bar reads AUCTION n / total and the contract badge appears once the
+auction is complete; then stepping continues into the cards. Shift+→ during the
+auction reveals the rest of it; Home goes back to the start of the auction.
+
 | key | action |
 |---|---|
-| → or N | next recorded card |
+| → or N | next call (call by call) or next recorded card |
 | ← or Z or Backspace | back one card (undo) |
-| Shift+→ / Shift+← | whole trick |
+| Shift+→ / Shift+← | rest of the auction, or a whole trick |
 | B | back to the actual play after a variation |
 | A | auto-play the record |
-| Home | back to the start of the play |
+| Home | back to the start (of the auction in call-by-call mode) |
 | PageDown / PageUp | next / previous board (not while recording) |
 
 Click a card in the hand whose turn it is to play it (follow suit is
