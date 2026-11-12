@@ -1,0 +1,251 @@
+{
+ "format": "bridge-presenter-session",
+ "version": 1,
+ "title": "Sample session",
+ "date": "2026-11-12",
+ "scoring": "MP",
+ "me": "Nora",
+ "boards": [
+  {
+   "id": "b7",
+   "number": 7,
+   "dealer": "N",
+   "vul": "NS",
+   "hands": {
+    "N": "KQ97.Q9.AK54.J75",
+    "E": "JT85.A742.863.Q6",
+    "S": "A643.KJT8.92.AK3",
+    "W": "2.653.QJT7.T9842"
+   },
+   "players": {
+    "N": "Nora",
+    "E": "Ed",
+    "S": "Sue",
+    "W": "Wes"
+   },
+   "auction": [
+    {
+     "call": "1S"
+    },
+    {
+     "call": "P"
+    },
+    {
+     "call": "4S",
+     "alert": "to play, 13+ HCP no slam interest"
+    },
+    {
+     "call": "P"
+    },
+    {
+     "call": "P"
+    },
+    {
+     "call": "P"
+    }
+   ],
+   "play": [
+    "D8",
+    "D9",
+    "DQ",
+    "DK",
+    "D5",
+    "D3",
+    "D2",
+    "DT",
+    "C4",
+    "C7",
+    "C6",
+    "CK",
+    "S3",
+    "S2",
+    "SQ",
+    "SJ",
+    "H9",
+    "H2",
+    "HT",
+    "H3",
+    "C3",
+    "C8",
+    "CJ",
+    "CQ",
+    "H7",
+    "HJ",
+    "H6",
+    "HQ",
+    "S9",
+    "S8",
+    "S6",
+    "H5",
+    "SK",
+    "S5",
+    "S4",
+    "CT",
+    "C5",
+    "D6",
+    "CA",
+    "C9",
+    "HK",
+    "D7",
+    "D4",
+    "HA",
+    "ST",
+    "SA",
+    "C2",
+    "S7",
+    "H8",
+    "DJ",
+    "DA",
+    "H4"
+   ],
+   "travellers": [
+    {
+     "ns": "Nora - Sue",
+     "ew": "Wes - Ed",
+     "contract": "4S",
+     "declarer": "N",
+     "tricks": 10,
+     "lead": "D8"
+    },
+    {
+     "ns": "Ana - Bor",
+     "ew": "Cene - Dan",
+     "contract": "4S",
+     "declarer": "N",
+     "tricks": 10,
+     "lead": "HA"
+    },
+    {
+     "ns": "Eva - Fran",
+     "ew": "Gal - Hana",
+     "contract": "4S",
+     "declarer": "N",
+     "tricks": 11,
+     "lead": "C9"
+    },
+    {
+     "ns": "Iva - Jan",
+     "ew": "Kaja - Luka",
+     "contract": "4S",
+     "declarer": "N",
+     "tricks": 10
+    },
+    {
+     "ns": "Maja - Nik",
+     "ew": "Ola - Pia",
+     "contract": "4S",
+     "declarer": "S",
+     "tricks": 9,
+     "lead": "SJ"
+    },
+    {
+     "ns": "Rok - Sara",
+     "ew": "Tim - Urša",
+     "contract": "3N",
+     "declarer": "N",
+     "tricks": 10
+    },
+    {
+     "ns": "Vid - Zala",
+     "ew": "Ajda - Blaž",
+     "contract": "4S",
+     "declarer": "N",
+     "tricks": 10
+    },
+    {
+     "ns": "Cvet - Dora",
+     "ew": "Ema - Filip",
+     "contract": "2S",
+     "declarer": "N",
+     "tricks": 11
+    },
+    {
+     "ns": "Gaja - Hugo",
+     "ew": "Ines - Jure",
+     "contract": "4S",
+     "declarer": "N",
+     "tricks": 11
+    },
+    {
+     "ns": "Klara - Lan",
+     "ew": "Mia - Nejc",
+     "contract": "4SX",
+     "declarer": "N",
+     "tricks": 10
+    },
+    {
+     "ns": "Ota - Petra",
+     "ew": "Rene - Simon",
+     "contract": "4S",
+     "declarer": "N",
+     "tricks": 9
+    },
+    {
+     "ns": "Tina - Uroš",
+     "ew": "Vesna - Žan",
+     "contract": "4S",
+     "declarer": "N",
+     "tricks": 10
+    }
+   ]
+  },
+  {
+   "id": "b2",
+   "number": 2,
+   "dealer": "E",
+   "vul": "NS",
+   "hands": {
+    "N": "A742.KJ85.Q92.63",
+    "E": "3.976.T87.AQ9754",
+    "S": "KJ5.AQ3.KJ54.K82",
+    "W": "QT986.T42.A63.JT"
+   },
+   "players": {
+    "N": "Partner",
+    "E": "Opponent",
+    "S": "You",
+    "W": "Opponent"
+   },
+   "auction": [
+    {
+     "call": "P"
+    },
+    {
+     "call": "1N",
+     "alert": "15-17 balanced"
+    },
+    {
+     "call": "P"
+    },
+    {
+     "call": "2C",
+     "alert": "Stayman, asks for a 4-card major"
+    },
+    {
+     "call": "P"
+    },
+    {
+     "call": "2H",
+     "alert": "4+ hearts, may hold 4 spades"
+    },
+    {
+     "call": "P"
+    },
+    {
+     "call": "4H"
+    },
+    {
+     "call": "P"
+    },
+    {
+     "call": "P"
+    },
+    {
+     "call": "P"
+    }
+   ],
+   "play": [],
+   "note": "Stayman finds the 4-4 heart fit. West leads a club: count your losers before you touch trumps."
+  }
+ ]
+}
