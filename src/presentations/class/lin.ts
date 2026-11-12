@@ -9,7 +9,7 @@
  *
  * Tokens used: pn (player names S,W,N,E), md (dealer digit + hands S,W,N,E),
  * sv (vulnerability o/n/e/b), ah / qx (board name), mb (bid), pc (played
- * card), mc (claim). Everything else (an, nt, pg, st, rh, vg, rs, …) is skipped.
+ * card), mc (claim). an (alert explanation of the last bid). Everything else (nt, pg, st, rh, vg, rs, …) is skipped.
  */
 import { Position } from "@/bridge/model/Position";
 import { Vulnerability } from "@/bridge/model/Vulnerability";
@@ -270,8 +270,14 @@ export function parseLin(input: string): LinBoard[] {
       case "mb": {
         if (!cur) break;
         const bid = normalizeBidString(value);
-        if (bid) cur.actions.push({ t: "bid", bid });
+        if (bid) cur.actions.push(/!/.test(value) ? { t: "bid", bid, alert: "" } : { t: "bid", bid });
         else cur.warnings.push(`unknown bid "${value}"`);
+        break;
+      }
+      case "an": {
+        // annotation (alert explanation) of the bid just made
+        const last = cur?.actions[cur.actions.length - 1];
+        if (last && last.t === "bid") last.alert = value;
         break;
       }
       case "pc": {
@@ -288,7 +294,7 @@ export function parseLin(input: string): LinBoard[] {
         break;
       }
       default:
-        break; // an, nt, pg, st, rh, vg, rs, mn, sk, …
+        break; // nt, pg, st, rh, vg, rs, mn, sk, …
     }
   }
 
